@@ -1,0 +1,25 @@
+<html>
+<script>
+    window.addEventListener('message', async function (event) {
+        console.log("Got action: " + event.data.action);
+
+        const html = event.data.html;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const code = event.data.code
+        //replace document. with doc.
+        let codeWithDoc = code.replace(/document\./g, 'doc.');
+
+        //replace [[action]] with action
+        if (event.data.action) {
+            console.log("Replacing [[action]] with " + event.data.action);
+            codeWithDoc = codeWithDoc.replace(/\[\[action\]\]/g, event.data.action);
+        } else {
+            console.log("No action to replace");
+            codeWithDoc = codeWithDoc.replace(/\[\[action\]\]/g, '');
+        }
+        event.source.window.postMessage(eval(codeWithDoc), event.origin);
+    });
+</script>
+</html>
