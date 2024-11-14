@@ -54,9 +54,24 @@ function connect() {
                     const tabs = await getTabsByHost(selector.host);
                     if (tabs.length > 0) {
                         if (tabs.length > 1) {
-                            console.log('Found multiple tabs by host. Using first', tabs);
+                            console.log('Found multiple tabs by host', tabs);
+
+                            const activeTab = await getActiveTab();
+                            if (activeTab) {
+                                const url = new URL(activeTab.url);
+                                if (url.host === selector.host) {
+                                    console.log("Using active tab");
+                                    tabId = activeTab.id;
+                                } else {
+                                    console.log("Defaulting to first tab by host");
+                                    tabId = tabs[0].id;
+                                }
+                            } else {
+                                console.log("Defaulting to first tab by host");
+                                tabId = tabs[0].id;}
+                        } else {
+                            tabId = tabs[0].id;
                         }
-                        tabId = tabs[0].id;
                     } else {
                         console.error('No tabs found by host:', selector.host);
                         const resp = {
