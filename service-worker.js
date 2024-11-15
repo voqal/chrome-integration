@@ -44,7 +44,23 @@ function connect() {
     webSocket.onmessage = async (event) => {
         const data = JSON.parse(event.data);
         //console.log("Event type: ", data.type);
-        if (data.type === 'execute_javascript') {
+        if (data.type === 'browser_info') {
+            const tabs = await chrome.tabs.query({});
+            const browserInfo = {}
+            tabs.forEach(tab => {
+                browserInfo[tab.id] = {
+                    url: tab.url,
+                    title: tab.title,
+                    active: tab.active,
+                }
+            });
+
+            const resp = {
+                result: browserInfo,
+                replyTo: data.replyTo
+            };
+            webSocket.send(JSON.stringify(resp));
+        } else if (data.type === 'javascript') {
             let tabId = null;
             const selector = data.metadata.selector;
             if (selector) {
