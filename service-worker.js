@@ -31,7 +31,7 @@ function connect() {
         return;
     }
 
-    console.log('Connecting to WebSocket server...');
+    //console.log('Connecting to WebSocket server...');
     webSocket = new WebSocket('ws://localhost:8000/integration/chrome'); //todo: dynamic
 
     webSocket.onopen = () => {
@@ -136,7 +136,7 @@ function connect() {
     };
 
     webSocket.onclose = () => {
-        console.log('WebSocket connection closed');
+        //console.log('WebSocket connection closed');
         webSocket = null;
         clearKeepAlive();
 
@@ -183,7 +183,7 @@ function startKeepAlive() {
 }
 
 function clearKeepAlive() {
-    console.log('Clearing keep alive interval...');
+    //console.log('Clearing keep alive interval...');
     if (keepAliveIntervalId) {
         clearInterval(keepAliveIntervalId);
         keepAliveIntervalId = null;
@@ -196,7 +196,7 @@ function startReconnectionLoop() {
 
     connect();
     reconnectIntervalId = setInterval(() => {
-        console.log('Attempting to reconnect...');
+        //console.log('Attempting to reconnect...');
         connect();
     }, 5000);
 }
