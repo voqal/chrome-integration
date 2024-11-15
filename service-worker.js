@@ -47,9 +47,11 @@ function connect() {
         if (data.type === 'browser_info') {
             const tabs = await chrome.tabs.query({});
             const browserInfo = {}
-            tabs.forEach(tab => {
-                browserInfo[tab.id] = {
+            browserInfo['tabs'] = tabs.map(tab => {
+                return {
+                    id: tab.id,
                     url: tab.url,
+                    host: new URL(tab.url).host,
                     title: tab.title,
                     active: tab.active,
                 }
