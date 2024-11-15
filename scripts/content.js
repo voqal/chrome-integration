@@ -8,143 +8,127 @@ iframe.style.height = '0';
 iframe.style.border = '0';
 body.appendChild(iframe);
 
+const handlers = new Map();
+
+window.addEventListener("message", (event) => {
+    if (event.source === iframe.contentWindow && event.data.voqal_resp_id) {
+        console.log("Received message from iframe", event.data);
+        const handler = handlers.get(event.data.voqal_resp_id);
+        if (handler) {
+            handler(event.data.result);
+            handlers.delete(event.data.voqal_resp_id);
+        } else {
+            console.warn(`No handler found for message ID: ${event.data.voqal_resp_id}`);
+        }
+    }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "evaluate") {
-        //console.log("EVAL input", message.code);
-        iframe.contentWindow.postMessage({html: document.body.innerHTML, code: message.code}, "*");
+        const handler = (data) => {
+            function getElementByXPath(xpath) {
+                const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                return result.singleNodeValue;
+            }
 
-        const voqalMessageHandler = (event) => {
-            if (event.source === iframe.contentWindow) {
-                function getElementByXPath(xpath) {
-                    const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-                    return result.singleNodeValue;
+            function triggerComplexClick(element) {
+                if (!element) {
+                    console.error("Element not found.");
+                    return;
                 }
-
-                function triggerComplexClick(element) {
-                    // Ensure the element exists
-                    if (!element) {
-                        console.error("Element not found.");
-                        return;
-                    }
-
-                    // Step 1: Focus the element if it can receive focus
-                    if (element.tabIndex >= 0) {
-                        element.focus();
-                        console.log("Element focused.");
-                    }
-
-                    // Step 2: Trigger `mousedown` and `mouseup` events for elements that need full simulation
-                    const mouseDownEvent = new MouseEvent("mousedown", {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                    });
-                    element.dispatchEvent(mouseDownEvent);
-                    console.log("Mousedown event dispatched.");
-
-                    const mouseUpEvent = new MouseEvent("mouseup", {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                    });
-                    element.dispatchEvent(mouseUpEvent);
-                    console.log("Mouseup event dispatched.");
-
-                    // Step 3: Trigger the click event
-                    const clickEvent = new MouseEvent("click", {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                    });
-                    element.dispatchEvent(clickEvent);
-                    console.log("Click event dispatched.");
-
-                    // Step 4: Trigger a key event if the element is focusable but didn’t respond to clicks
-                    // Use `Enter` key, which commonly activates buttons and links
-                    if (!element.onclick && element.tabIndex >= 0) {
-                        const keyEvent = new KeyboardEvent("keydown", {
-                            bubbles: true,
-                            cancelable: true,
-                            key: "Enter",
-                            code: "Enter",
-                        });
-                        element.dispatchEvent(keyEvent);
-                        console.log("Enter key event dispatched.");
-                    }
+                if (element.tabIndex >= 0) {
+                    element.focus();
+                    console.log("Element focused.");
                 }
+                const mouseDownEvent = new MouseEvent("mousedown", {bubbles: true, cancelable: true, view: window});
+                element.dispatchEvent(mouseDownEvent);
+                console.log("Mousedown event dispatched.");
+                const mouseUpEvent = new MouseEvent("mouseup", {bubbles: true, cancelable: true, view: window});
+                element.dispatchEvent(mouseUpEvent);
+                console.log("Mouseup event dispatched.");
+                const clickEvent = new MouseEvent("click", {bubbles: true, cancelable: true, view: window});
+                element.dispatchEvent(clickEvent);
+                console.log("Click event dispatched.");
+                if (!element.onclick && element.tabIndex >= 0) {
+                    const keyEvent = new KeyboardEvent("keydown", {
+                        bubbles: true,
+                        cancelable: true,
+                        key: "Enter",
+                        code: "Enter"
+                    });
+                    element.dispatchEvent(keyEvent);
+                    console.log("Enter key event dispatched.");
+                }
+            }
 
-                function clickAndReevaluate(iframe, message, event) {
-                    console.log("doing click");
+            function clickAndReevaluate(iframe, message) {
+                console.log("doing click");
+                const element = getElementByXPath(data.xpath);
+                if (element) {
+                    triggerComplexClick(element);
+                } else {
+                    console.error('Element not found');
+                }
+                setTimeout(() => {
+                    console.log("Reevaluating");
+                    iframe.contentWindow.postMessage({
+                        html: document.body.innerHTML,
+                        code: message.code,
+                        action: 'reevaluate',
+                        voqal_resp_id: message.voqal_resp_id
+                    }, "*");
+                }, 1000);
+            }
 
-                    const element = getElementByXPath(event.data.xpath);
+            function writeText(iframe, message) {
+                console.log("writing text");
+                const element = getElementByXPath(data.xpath);
+                if (element) {
+                    element.innerText = data.text;
+                } else {
+                    console.error('Element not found');
+                }
+            }
+
+            function click(iframe, message) {
+                let toClick = [];
+                if (data.xpath) {
+                    toClick = [getElementByXPath(data.xpath)];
+                } else if (data.xpaths) {
+                    toClick = data.xpaths.map(getElementByXPath);
+                } else {
+                    console.error('No xpath(s) provided');
+                }
+                toClick.forEach(element => {
                     if (element) {
-                        // element.click();
+                        console.log("clicking", element);
                         triggerComplexClick(element);
                     } else {
                         console.error('Element not found');
                     }
+                });
+            }
 
-                    // Wait for the click to finish, then reevaluate
-                    setTimeout(() => {
-                        console.log("Reevaluating");
-                        iframe.contentWindow.postMessage({
-                            html: document.body.innerHTML,
-                            code: message.code,
-                            action: 'reevaluate'
-                        }, "*");
-                    }, 1000);
-                }
-
-                function writeText(iframe, message, event) {
-                    console.log("writing text");
-                    const element = getElementByXPath(event.data.xpath);
-                    if (element) {
-                        element.innerText = event.data.text;
-                    } else {
-                        console.error('Element not found');
-                    }
-                }
-
-                function click(iframe, message, event) {
-                    let toClick = [];
-                    if (event.data.xpath) {
-                        toClick = [getElementByXPath(event.data.xpath)];
-                    } else if (event.data.xpaths) {
-                        toClick = event.data.xpaths.map(getElementByXPath);
-                    } else {
-                        console.error('No xpath(s) provided');
-                    }
-                    toClick.forEach(element => {
-                        if (element) {
-                            console.log("clicking", element);
-                            //element.click();
-                            triggerComplexClick(element);
-                        } else {
-                            console.error('Element not found');
-                        }
-                    });
-                }
-
-                if (event.data.action === 'click') {
-                    click(iframe, message, event);
-
-                    sendResponse({result: event.data});
-                    window.removeEventListener("message", voqalMessageHandler);
-                } else if (event.data.action === 'click_and_reevaluate') {
-                    clickAndReevaluate(iframe, message, event);
-                } else if (event.data.action === 'write_text') {
-                    writeText(iframe, message, event);
-
-                    sendResponse({result: event.data});
-                    window.removeEventListener("message", voqalMessageHandler);
-                } else {
-                    sendResponse({result: event.data});
-                    window.removeEventListener("message", voqalMessageHandler);
-                }
+            if (data.action === 'click') {
+                click(iframe, message);
+                sendResponse({result: data});
+            } else if (data.action === 'click_and_reevaluate') {
+                clickAndReevaluate(iframe, message);
+            } else if (data.action === 'write_text') {
+                writeText(iframe, message);
+                sendResponse({result: data});
+            } else {
+                sendResponse({result: data});
             }
         };
 
-        window.addEventListener("message", voqalMessageHandler);
+        handlers.set(message.voqal_resp_id, handler);
+        iframe.contentWindow.postMessage({
+            html: document.body.innerHTML,
+            code: message.code,
+            voqal_resp_id: message.voqal_resp_id
+        }, "*");
+
         return true;
     }
 });

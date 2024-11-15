@@ -19,7 +19,12 @@
             //console.log("No action to replace");
             codeWithDoc = codeWithDoc.replace(/\[\[action\]\]/g, '');
         }
-        event.source.window.postMessage(eval(codeWithDoc), event.origin);
+
+        const execResult = {
+            result: eval(codeWithDoc),
+            voqal_resp_id: event.data.voqal_resp_id
+        }
+        event.source.window.postMessage(execResult, event.origin);
     });
 </script>
 </html>

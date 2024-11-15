@@ -66,7 +66,8 @@ function connect() {
                                 }
                             } else {
                                 console.log("Defaulting to first tab by host");
-                                tabId = tabs[0].id;}
+                                tabId = tabs[0].id;
+                            }
                         } else {
                             tabId = tabs[0].id;
                         }
@@ -114,17 +115,21 @@ function connect() {
                 tabId = activeTab.id;
             }
 
-            chrome.tabs.sendMessage(tabId, {type: "evaluate", code: data.payload}, (response) => {
+            const execFunc = {
+                type: "evaluate",
+                code: data.payload,
+                voqal_resp_id: data.replyTo
+            }
+            chrome.tabs.sendMessage(tabId, execFunc, (response) => {
                 if (chrome.runtime.lastError) {
                     console.error("Error:", chrome.runtime.lastError);
                 } else {
-                    //console.log("Received response from content script:", response.result);
-                    const replyTo = data.replyTo;
-                    //console.log('replyTo', replyTo);
                     const resp = {
                         result: response.result,
-                        replyTo: replyTo
+                        replyTo: data.replyTo
                     };
+
+                    //console.log("Sending resp: ", resp);
                     webSocket.send(JSON.stringify(resp));
                 }
             });
