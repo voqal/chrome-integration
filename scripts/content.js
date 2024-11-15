@@ -10,7 +10,7 @@ body.appendChild(iframe);
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "evaluate") {
-        console.log("EVAL input", message.code);
+        //console.log("EVAL input", message.code);
         iframe.contentWindow.postMessage({html: document.body.innerHTML, code: message.code}, "*");
 
         const voqalMessageHandler = (event) => {

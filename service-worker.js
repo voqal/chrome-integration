@@ -42,10 +42,8 @@ function connect() {
     };
 
     webSocket.onmessage = async (event) => {
-        console.log(event.data);
-
         const data = JSON.parse(event.data);
-        console.log("Event type: ", data.type);
+        //console.log("Event type: ", data.type);
         if (data.type === 'execute_javascript') {
             let tabId = null;
             const selector = data.metadata.selector;
@@ -120,9 +118,9 @@ function connect() {
                 if (chrome.runtime.lastError) {
                     console.error("Error:", chrome.runtime.lastError);
                 } else {
-                    console.log("Received response from content script:", response.result);
+                    //console.log("Received response from content script:", response.result);
                     const replyTo = data.replyTo;
-                    console.log('replyTo', replyTo);
+                    //console.log('replyTo', replyTo);
                     const resp = {
                         result: response.result,
                         replyTo: replyTo
@@ -130,8 +128,8 @@ function connect() {
                     webSocket.send(JSON.stringify(resp));
                 }
             });
-
-            console.log('tabId', tabId);
+        } else {
+            console.error('Unknown event type:', data.type);
         }
     };
 
