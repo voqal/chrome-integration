@@ -12,7 +12,6 @@ const handlers = new Map();
 
 window.addEventListener("message", (event) => {
     if (event.source === iframe.contentWindow && event.data.voqal_resp_id) {
-        console.log("Received message from iframe", event.data);
         const handler = handlers.get(event.data.voqal_resp_id);
         if (handler) {
             handler(event.data.result);
