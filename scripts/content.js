@@ -14,8 +14,7 @@ window.addEventListener("message", (event) => {
     if (event.source === iframe.contentWindow && event.data.voqal_resp_id) {
         const handler = handlers.get(event.data.voqal_resp_id);
         if (handler) {
-            handler(event.data.result);
-            handlers.delete(event.data.voqal_resp_id);
+            handler(event);
         } else {
             console.warn(`No handler found for message ID: ${event.data.voqal_resp_id}`);
         }
@@ -24,7 +23,9 @@ window.addEventListener("message", (event) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "evaluate") {
-        const handler = (data) => {
+        const handler = (event) => {
+            const data = event.data.result;
+
             function getElementByXPath(xpath) {
                 const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
                 return result.singleNodeValue;
@@ -111,13 +112,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (data.action === 'click') {
                 click(iframe, message);
                 sendResponse({result: data});
+                handlers.delete(event.data.voqal_resp_id);
             } else if (data.action === 'click_and_reevaluate') {
                 clickAndReevaluate(iframe, message);
             } else if (data.action === 'write_text') {
                 writeText(iframe, message);
                 sendResponse({result: data});
+                handlers.delete(event.data.voqal_resp_id);
             } else {
                 sendResponse({result: data});
+                handlers.delete(event.data.voqal_resp_id);
             }
         };
 
